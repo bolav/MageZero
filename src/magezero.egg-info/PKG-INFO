@@ -3,4 +3,14 @@ Name: magezero
 Version: 0.1.0
 Requires-Python: >=3.10
 License-File: LICENSE
+Requires-Dist: numpy>=1.24
+Requires-Dist: scipy>=1.10
+Requires-Dist: torch>=2.1
+Requires-Dist: h5py>=3.8
+Requires-Dist: pyroaring>=0.3.6
+Requires-Dist: flask>=2.3
+Requires-Dist: msgpack>=1.0.5
+Requires-Dist: waitress>=2.1
+Requires-Dist: matplotlib>=3.7
+Requires-Dist: pyyaml>=6.0
 Dynamic: license-file

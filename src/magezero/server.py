@@ -38,18 +38,25 @@ def init(deck: str, version: int, port: int):
     ignore_path = f"{model_dir}/ignore.roar"
     model_path = f"{model_dir}/model.pt.gz"
 
+    print(f"[server] deck={deck} ver={version} device={DEVICE}")
+
+    print(f"[server] loading ignore list from {ignore_path}...")
     with open(ignore_path, "rb") as f:
         IGNORE_BM = BitMap.deserialize(f.read())
+    print(f"[server] ignore list: {len(IGNORE_BM)} features masked, {GLOBAL_MAX - len(IGNORE_BM)} active")
 
     VALID_RANGE = BitMap(range(GLOBAL_MAX))
 
+    print(f"[server] loading model from {model_path}...")
     server_model = Net(GLOBAL_MAX, ACTIONS_MAX).to(DEVICE).eval()
     ckpt = load_model(model_path)
     server_model.load_state_dict(ckpt["model_state_dict"])
+    epoch = ckpt.get("epoch", "?")
+    print(f"[server] model loaded (epoch={epoch})")
 
     threading.Thread(target=worker_loop, daemon=True).start()
 
-    print(f"[INIT] deck={deck} ver={version} port={port} device={DEVICE}")
+    print(f"[server] ready on http://127.0.0.1:{port} — waiting for requests")
     waitress.serve(app, host="127.0.0.1", port=port, threads=6)
 
 class Pending:

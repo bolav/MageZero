@@ -102,11 +102,18 @@ class Net(nn.Module):
         h = self.fc_after_embedding(emb)
         return self.player_priority_head(h), self.opponent_priority_head(h), self.target_head(h), self.binary_head(h), self.value_head(h).squeeze(-1)
 
-def load_model(path):
+def load_model(path, map_location=None):
+    if map_location is None:
+        if torch.cuda.is_available():
+            map_location = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            map_location = torch.device("mps")
+        else:
+            map_location = torch.device("cpu")
     if path.endswith('.gz'):
         with gzip.open(path, 'rb') as f:
-            return torch.load(f)
-    return torch.load(path)
+            return torch.load(f, map_location=map_location, weights_only=False)
+    return torch.load(path, map_location=map_location, weights_only=False)
 
 def normalize_policy_labels(raw: torch.Tensor) -> torch.Tensor:
     total = raw.sum(dim=1, keepdim=True).clamp(min=1e-8)
