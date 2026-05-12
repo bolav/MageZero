@@ -1,0 +1,55 @@
+{
+  "players": [
+    {
+      "name": "P1",
+      "deck": {
+        "type": "Explicit",
+        "cards": {
+          "Malcolm, Alluring Scoundrel": 4,
+          "Skrelv, Defector Mite": 4,
+          "Sleep-Cursed Faerie": 2,
+          "Kitsa, Otterball Elite": 4,
+          "Bounce Off": 4,
+          "Negate": 2,
+          "No More Lies": 4,
+          "Soul Partition": 2,
+          "Spell Pierce": 2,
+          "Combat Research": 4,
+          "Shardmage's Rescue": 2,
+          "Sheltered by Ghosts": 4,
+          "Adarkar Wastes": 4,
+          "Floodfarm Verge": 3,
+          "Meticulous Archive": 4,
+          "Seachrome Coast": 4,
+          "Island": 7
+        }
+      }
+    },
+    {
+      "name": "P2",
+      "deck": {
+        "type": "Explicit",
+        "cards": {
+          "Malcolm, Alluring Scoundrel": 4,
+          "Skrelv, Defector Mite": 4,
+          "Sleep-Cursed Faerie": 2,
+          "Kitsa, Otterball Elite": 4,
+          "Bounce Off": 4,
+          "Negate": 2,
+          "No More Lies": 4,
+          "Soul Partition": 2,
+          "Spell Pierce": 2,
+          "Combat Research": 4,
+          "Shardmage's Rescue": 2,
+          "Sheltered by Ghosts": 4,
+          "Adarkar Wastes": 4,
+          "Floodfarm Verge": 3,
+          "Meticulous Archive": 4,
+          "Seachrome Coast": 4,
+          "Island": 7
+        }
+      }
+    }
+  ],
+  "skipMulligans": true
+}
