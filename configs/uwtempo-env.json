@@ -51,5 +51,6 @@
       }
     }
   ],
-  "skipMulligans": true
+  "skipMulligans": true,
+  "maxTurns": 150
 }

@@ -76,6 +76,9 @@ def _load_deck_config(deck_json: str | None, gym_url: str) -> dict:
 # Single-game loop
 # --------------------------------------------------------------------------
 
+MAX_STEPS_PER_GAME = 2000  # safety cap — generous for control mirrors (150 turns × ~10 steps)
+
+
 def play_game(
     client:   ArgentumClient,
     encoder:  ArgentumStateEncoder,
@@ -90,7 +93,7 @@ def play_game(
     perspective_id = _player_id(obs.get("perspectivePlayerId"))
     steps = 0
 
-    while not obs.get("terminated", False):
+    while not obs.get("terminated", False) and steps < MAX_STEPS_PER_GAME:
         agent_id = _player_id(obs.get("agentToAct"))
         is_player = (agent_id == perspective_id)
 
