@@ -15,6 +15,15 @@ from pyroaring import BitMap
 
 #add training data under: data/{deck name}/ver{your version num}/training/{your data}.hdf5
 
+# Device selection: CUDA > MPS (Apple Silicon) > CPU
+if torch.cuda.is_available():
+    DEVICE = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    DEVICE = torch.device("mps")
+else:
+    DEVICE = torch.device("cpu")
+print(f"[train] device={DEVICE}")
+
 
 
 def train(
@@ -34,7 +43,7 @@ def train(
     ignore_list = create_redundancy_ignore_list(ds_raw)
 
     # model and data loaders
-    model = Net(GLOBAL_MAX, ACTIONS_MAX).cuda()
+    model = Net(GLOBAL_MAX, ACTIONS_MAX).to(DEVICE)
 
     # optional start point
     if use_checkpoint:
@@ -72,11 +81,12 @@ def train(
 
 
 
+    pin = DEVICE.type == "cuda"
     dl = DataLoader(ds, batch_size=128, shuffle=True, num_workers=0, collate_fn=collate_batch,
-                    pin_memory=True, persistent_workers=False)
+                    pin_memory=pin, persistent_workers=False)
 
     dl_test = DataLoader(test_ds, batch_size=128, shuffle=False, num_workers=0, collate_fn=collate_batch,
-                    pin_memory=True, persistent_workers=False)
+                    pin_memory=pin, persistent_workers=False)
 
     test.SHOW_CONFUSION_MATRIX = False
 
@@ -101,20 +111,25 @@ def train(
     mse = nn.MSELoss()
     kld = nn.KLDivLoss(reduction='batchmean')
 
+    import time
+    total_batches = len(dl)
+
     #main training loop
     for epoch in range(1, epochs+1):
         total_pA_loss, total_pB_loss, total_t_loss, total_b_loss, total_v_loss, total_l1_sparse_loss, total_l1_dense_loss = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
         total_decision_examples, total_pA_examples, total_pB_examples, total_t_examples, total_b_examples = 0,0,0,0,0
         model.train()
+        epoch_start = time.time()
+        batch_num = 0
 
         for batch_indices, batch_offsets, batch_policy_labels, batch_value_labels, is_players, action_types in dl:
-            # Move new input tensors to CUDA
-            batch_indices = batch_indices.cuda()
-            batch_offsets = batch_offsets.cuda()
-            batch_policy_labels = batch_policy_labels.cuda()
-            batch_value_labels = batch_value_labels.cuda()
-            is_players = is_players.cuda().squeeze(-1).to(torch.bool)
-            action_types = action_types.cuda().squeeze(-1).to(torch.long)
+            batch_num += 1
+            batch_indices = batch_indices.to(DEVICE)
+            batch_offsets = batch_offsets.to(DEVICE)
+            batch_policy_labels = batch_policy_labels.to(DEVICE)
+            batch_value_labels = batch_value_labels.to(DEVICE)
+            is_players = is_players.to(DEVICE).squeeze(-1).to(torch.bool)
+            action_types = action_types.to(DEVICE).squeeze(-1).to(torch.long)
 
             # Model call uses indices and offsets
             priority_logits, opponent_priority_logits, target_logits, binary_logits ,value_pred = model(batch_indices, batch_offsets)
@@ -192,6 +207,15 @@ def train(
 
 
             total_v_loss += lv.item()
+
+            if batch_num % 10 == 0 or batch_num == total_batches:
+                elapsed = time.time() - epoch_start
+                print(f"  epoch {epoch}/{epochs}  batch {batch_num}/{total_batches}"
+                      f"  pA={total_pA_loss/max(total_pA_examples,1):.3f}"
+                      f"  v={total_v_loss/batch_num:.3f}"
+                      f"  {elapsed:.0f}s", end="\r", flush=True)
+
+        print()  # newline after \r progress line
 
         avg_pA_loss = (total_pA_loss / max(total_pA_examples, 1))
         avg_pB_loss = (total_pB_loss / max(total_pB_examples, 1))
