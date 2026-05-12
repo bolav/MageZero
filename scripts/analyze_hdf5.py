@@ -80,13 +80,21 @@ def analyze(path: str) -> dict:
 
     # ------------------------------------------------------------------
     # Game-level stats — infer approximate game count and length.
-    # Each game's steps contribute an identical outcome value.
+    # Detect boundaries by finding steps where the outcome value changes
+    # OR where the feature index resets (new game starts low again).
+    # Falls back to outcome-change detection which works poorly for all-draws.
     # ------------------------------------------------------------------
-    # Count games by outcome sign-change runs (approximate)
-    # Better: count contiguous runs of same outcome
-    game_boundaries = np.where(np.diff(outcomes) != 0)[0] + 1
-    approx_games    = len(game_boundaries) + 1
-    avg_steps       = N / max(approx_games, 1)
+    # Use contiguous runs of identical outcome values
+    boundaries = [0]
+    for i in range(1, N):
+        if outcomes[i] != outcomes[i - 1]:
+            boundaries.append(i)
+    boundaries.append(N)
+    run_lengths = np.diff(boundaries)
+    # Filter out very short runs (< 5 steps) as noise
+    game_runs   = run_lengths[run_lengths >= 5]
+    approx_games = max(len(game_runs), 1)
+    avg_steps    = float(run_lengths.mean()) if len(run_lengths) > 0 else N
 
     return {
         "path":             path,

@@ -1,0 +1,52 @@
+{
+  "players": [
+    {
+      "name": "UWTempo",
+      "deck": {
+        "type": "Explicit",
+        "cards": {
+          "Malcolm, Alluring Scoundrel": 4,
+          "Skrelv, Defector Mite": 4,
+          "Sleep-Cursed Faerie": 2,
+          "Kitsa, Otterball Elite": 4,
+          "Bounce Off": 4,
+          "Negate": 2,
+          "No More Lies": 4,
+          "Soul Partition": 2,
+          "Spell Pierce": 2,
+          "Combat Research": 4,
+          "Shardmage's Rescue": 2,
+          "Sheltered by Ghosts": 4,
+          "Adarkar Wastes": 4,
+          "Floodfarm Verge": 3,
+          "Meticulous Archive": 4,
+          "Seachrome Coast": 4,
+          "Island": 7
+        }
+      }
+    },
+    {
+      "name": "MonoB",
+      "deck": {
+        "type": "Explicit",
+        "cards": {
+          "Bloodletter of Aclazotz": 4,
+          "Cecil, Dark Knight": 3,
+          "Deep-Cavern Bat": 4,
+          "Forsaken Miner": 4,
+          "Gatekeeper of Malakir": 4,
+          "Mai, Scornful Striker": 3,
+          "Unstoppable Slasher": 4,
+          "Iridescent Vinelasher": 4,
+          "Shoot the Sheriff": 2,
+          "Unholy Annex // Ritual Chamber": 4,
+          "Realm of Koh": 4,
+          "Soulstone Sanctuary": 2,
+          "Swamp": 18
+        }
+      }
+    }
+  ],
+  "skipMulligans": true,
+  "maxTurns": 75
+}

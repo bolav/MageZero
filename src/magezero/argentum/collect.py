@@ -76,16 +76,17 @@ def _load_deck_config(deck_json: str | None, gym_url: str) -> dict:
 # Single-game loop
 # --------------------------------------------------------------------------
 
-MAX_STEPS_PER_GAME = 2000  # safety cap — generous for control mirrors (150 turns × ~10 steps)
+MAX_STEPS_PER_GAME = 5000  # safety cap — server enforces maxTurns; this only catches runaway bugs
 
 
 def play_game(
-    client:   ArgentumClient,
-    encoder:  ArgentumStateEncoder,
-    mcts:     PythonMcts,
-    writer:   HDF5Writer,
-    config:   dict,
-    game_num: int,
+    client:           ArgentumClient,
+    encoder:          ArgentumStateEncoder,
+    mcts:             PythonMcts,
+    writer:           HDF5Writer,
+    config:           dict,
+    game_num:         int,
+    heuristic_opponent: bool = False,
 ) -> dict:
     env_id, obs = client.create_env(config)
     writer.begin_game()
@@ -96,6 +97,15 @@ def play_game(
     while not obs.get("terminated", False) and steps < MAX_STEPS_PER_GAME:
         agent_id = _player_id(obs.get("agentToAct"))
         is_player = (agent_id == perspective_id)
+
+        # Opponent's turn: use engine heuristic (fast, no MCTS).
+        # Do this before the legalActions check — heuristic handles structured
+        # decisions too, so legalActions may be empty on the opponent's turn.
+        if heuristic_opponent and not is_player:
+            result = client.heuristic_step(env_id)
+            obs = result.get("nextObservation", result)
+            steps += 1
+            continue
 
         legal = obs.get("legalActions", [])
         if not legal:
@@ -150,17 +160,20 @@ def run(
     server_url:  str | None,
     simulations: int,
     flush_every: int,
+    heuristic_opponent: bool = False,
 ) -> None:
     fm      = FeatureMap(feature_map_path)
     client  = ArgentumClient(gym_url)
     encoder = ArgentumStateEncoder(fm)
     offline = server_url is None
     mcts    = PythonMcts(
-        client      = client,
-        encoder     = encoder,
-        simulations = simulations,
-        offline     = offline,
-        server_url  = server_url,
+        client           = client,
+        encoder          = encoder,
+        simulations      = simulations,
+        offline          = offline,
+        server_url       = server_url,
+        dirichlet_alpha  = 0.3,
+        dirichlet_weight = 0.0 if offline else 0.25,
     )
 
     print(f"[collect] gym={gym_url}  server={'offline' if offline else server_url}")
@@ -182,7 +195,8 @@ def run(
 
     with HDF5Writer(output_path) as writer:
         for i in range(games):
-            result = play_game(client, encoder, mcts, writer, config, i)
+            result = play_game(client, encoder, mcts, writer, config, i,
+                               heuristic_opponent=heuristic_opponent)
             outcome = result["outcome"]
             if outcome > 0:
                 wins += 1
@@ -241,8 +255,10 @@ def main() -> None:
                    help="FeatureMap JSON file path (created if missing)")
     p.add_argument("--deck-config",  default=None,
                    help="JSON file with EnvConfig body for POST /envs")
-    p.add_argument("--offline",       action="store_true",
+    p.add_argument("--offline",             action="store_true",
                    help="Use uniform priors (no inference server) — generation 0 bootstrap")
+    p.add_argument("--heuristic-opponent",  action="store_true",
+                   help="Drive opponent with engine heuristic AI instead of MCTS (faster)")
     p.add_argument("--flush-every",  type=int,  default=10,
                    help="Flush HDF5 and save FeatureMap every N games")
     args = p.parse_args()
@@ -252,14 +268,15 @@ def main() -> None:
     server_url = None if args.offline else args.server_url
 
     run(
-        games            = args.games,
-        config           = config,
-        output_path      = args.output,
-        feature_map_path = args.feature_map,
-        gym_url          = args.gym_url,
-        server_url       = server_url,
-        simulations      = args.simulations,
-        flush_every      = args.flush_every,
+        games               = args.games,
+        config              = config,
+        output_path         = args.output,
+        feature_map_path    = args.feature_map,
+        gym_url             = args.gym_url,
+        server_url          = server_url,
+        simulations         = args.simulations,
+        flush_every         = args.flush_every,
+        heuristic_opponent  = args.heuristic_opponent,
     )
 
 

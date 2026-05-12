@@ -19,6 +19,7 @@ import urllib.request
 from dataclasses import dataclass, field
 
 import msgpack
+import numpy as np
 
 from .client import ArgentumClient
 from .encoder import ArgentumStateEncoder
@@ -122,17 +123,21 @@ class InferenceClient:
 class PythonMcts:
     def __init__(
         self,
-        client:      ArgentumClient,
-        encoder:     ArgentumStateEncoder,
-        simulations: int = 100,
-        offline:     bool = True,
-        server_url:  str | None = None,
+        client:           ArgentumClient,
+        encoder:          ArgentumStateEncoder,
+        simulations:      int = 100,
+        offline:          bool = True,
+        server_url:       str | None = None,
+        dirichlet_alpha:  float = 0.3,
+        dirichlet_weight: float = 0.25,
     ):
-        self._client      = client
-        self._encoder     = encoder
-        self._simulations = simulations
-        self._offline     = offline
-        self._inference   = InferenceClient(server_url) if server_url else None
+        self._client           = client
+        self._encoder          = encoder
+        self._simulations      = simulations
+        self._offline          = offline
+        self._inference        = InferenceClient(server_url) if server_url else None
+        self._dirichlet_alpha  = dirichlet_alpha
+        self._dirichlet_weight = dirichlet_weight if not offline else 0.0
 
     def select_action(
         self,
@@ -169,6 +174,14 @@ class PythonMcts:
 
         root = MctsNode()
         self._expand(root, obs, encoded_acts)
+
+        # Dirichlet noise on root priors — forces exploration away from
+        # always-pass policies that emerge in control mirrors (AlphaZero §2.2)
+        if self._dirichlet_weight > 0.0 and len(root.edges) > 1:
+            noise = np.random.dirichlet([self._dirichlet_alpha] * len(root.edges))
+            for edge, n in zip(root.edges, noise):
+                edge.prior = (1 - self._dirichlet_weight) * edge.prior + \
+                             self._dirichlet_weight * float(n)
 
         for _ in range(self._simulations):
             fork_id = self._client.fork(env_id)[0]
